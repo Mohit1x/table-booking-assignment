@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import BookingForm from "../../../components/BookingForm";
 
 const BookingFormPage = () => {
   return (
-    <div>
+    <Suspense fallback={<div>Loading...</div>}>
       <BookingForm />
-    </div>
+    </Suspense>
   );
 };
 
