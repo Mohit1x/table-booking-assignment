@@ -12,7 +12,12 @@ import { useRouter } from "next/navigation";
 import useFetchBookings from "@/hooks/useFetchBookings";
 
 const TimeLine = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // Initialize with start of day in local timezone
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  });
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -21,9 +26,9 @@ const TimeLine = () => {
 
   const generateTimeSlots = () => {
     const slots = [];
-    const start = new Date();
+    const start = new Date(selectedDate);
     start.setHours(10, 0, 0);
-    const end = new Date();
+    const end = new Date(selectedDate);
     end.setHours(20, 0, 0);
 
     while (start <= end) {
@@ -41,40 +46,35 @@ const TimeLine = () => {
 
   const timeSlots = generateTimeSlots();
 
-  // const fetchBookings = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const response = await fetch(
-  //       "https://hotel-booking-backend-eight.vercel.app/api/booking"
-  //     );
-  //     const data = await response.json();
-  //     setBookings(data);
-  //     console.log(bookings, "bookings");
-  //   } catch (error) {
-  //     console.error("Error fetching bookings:", error);
-  //   }
-  //   setIsLoading(false);
-  // };
-
-  // useEffect(() => {
-  //   fetchBookings();
-  // }, []);
+  const formatDateToLocaleDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   const handleBooking = (time) => {
-    router.push(`/booking-form/?time=${time}&date=${selectedDate}`);
+    // Use local date string format
+    const formattedDate = formatDateToLocaleDateString(selectedDate);
+    router.push(`/booking-form/?time=${time}&date=${formattedDate}`);
   };
 
   const groupedBookings = bookings.reduce((acc, booking) => {
-    if (!acc[booking.date]) {
-      acc[booking.date] = {};
+    // Handle dates in local timezone
+    const bookingDate = new Date(booking.date);
+    const dateKey = formatDateToLocaleDateString(bookingDate);
+
+    if (!acc[dateKey]) {
+      acc[dateKey] = {};
     }
-    acc[booking.date][booking.time] = booking;
+    acc[dateKey][booking.time] = booking;
     return acc;
   }, {});
 
   const changeDate = (days) => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + days);
+    newDate.setHours(0, 0, 0, 0);
     setSelectedDate(newDate);
   };
 
@@ -89,7 +89,8 @@ const TimeLine = () => {
 
   const isToday = (date) => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
+    today.setHours(0, 0, 0, 0);
+    return date.getTime() === today.getTime();
   };
 
   return (
@@ -126,7 +127,7 @@ const TimeLine = () => {
           ) : (
             <div className="space-y-4">
               {timeSlots.map((timeSlot, index) => {
-                const currentDate = selectedDate.toISOString().split("T")[0];
+                const currentDate = formatDateToLocaleDateString(selectedDate);
                 const booking = groupedBookings[currentDate]?.[timeSlot];
                 const isBooked = !!booking;
 
